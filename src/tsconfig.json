@@ -16,8 +16,8 @@
     "preserveConstEnums": true,
     "removeComments": true,
     "skipLibCheck": true,
-    "suppressImplicitAnyIndexErrors": true,
-    "target": "es2017"
+    "target": "es2020",
+    "types": ["node"]
   },
   "exclude": [
     "dist",

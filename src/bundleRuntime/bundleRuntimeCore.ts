@@ -9,6 +9,10 @@ export const BUNDLE_RUNTIME_NAMES = {
   INTEROP_REQUIRE_DEFAULT_FUNCTION: 'dt',
   MODULE_COLLECTION: 'modules',
   REQUIRE_FUNCTION: 'r',
+  // ESM-specific
+  DYNAMIC_IMPORT: 'di',
+  IMPORT_META: 'meta',
+  ESM_INTEROP: 'esm',
 };
 
 export function createGlobalModuleCall(moduleId: number) {
@@ -102,9 +106,34 @@ export function bundleRuntimeCore(props: IBundleRuntimeCore) {
     optional += '\nf.modules = modules;';
   }
 
+  // ESM interop helpers
+  const esmHelpers = `
+  // ESM interop
+  f.${BUNDLE_RUNTIME_NAMES.ESM_INTEROP} = function(m) { return m && m.__esModule ? m : { "default": m }; };
+  f.exportAll = function(s, t) { Object.keys(s).forEach(function(k) { if (k !== "default" && k !== "__esModule") Object.defineProperty(t, k, { enumerable: true, get: function() { return s[k]; } }); }); };
+  // Dynamic import support
+  f.${BUNDLE_RUNTIME_NAMES.DYNAMIC_IMPORT} = function(id) {
+    return new Promise(function(resolve, reject) {
+      try {
+        if (modules[id]) return resolve(f.r(id));
+        ${props.codeSplittingMap ? 'var s = cs.b[id]; if (s) return lb(id, s).then(function() { resolve(f.r(id)); }).catch(reject);' : ''}
+        reject(new Error('Module ' + id + ' not found'));
+      } catch(e) { reject(e); }
+    });
+  };
+  // import.meta support
+  f.${BUNDLE_RUNTIME_NAMES.IMPORT_META} = function(id, path) {
+    ${target === 'browser' || target === 'electron' 
+      ? `var base = document.baseURI || location.href;
+    return { url: new URL(path, base).href, resolve: function(s) { return new URL(s, base).href; } };`
+      : `var p = require('path'), u = require('url');
+    var abs = p.resolve(__dirname, path);
+    return { url: u.pathToFileURL(abs).href, dirname: p.dirname(abs), filename: abs };`}
+  };`;
+
   let CODE = `${isIsolated ? `var ${BUNDLE_RUNTIME_NAMES.GLOBAL_OBJ} = ` : ''}(function() {
   ${coreVariable}
-  var modules = f.modules = f.modules || {}; ${optional}
+  var modules = f.modules = f.modules || {}; ${optional}${esmHelpers}
   f.${BUNDLE_RUNTIME_NAMES.BUNDLE_FUNCTION} = function(collection, fn) {
     for (var num in collection) {
       modules[num] = collection[num];

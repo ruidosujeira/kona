@@ -1,0 +1,47 @@
+[package]
+name = "kona-wasm"
+version = "0.1.0"
+edition = "2021"
+authors = ["Kona Team"]
+description = "High-performance tree-shaking and minification for Kona bundler"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["console_error_panic_hook"]
+
+[dependencies]
+wasm-bindgen = "0.2.99"
+wasm-bindgen-futures = "0.4.49"
+js-sys = "0.3.76"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde-wasm-bindgen = "0.6"
+swc_core = { version = "0.106", features = [
+    "ecma_parser",
+    "ecma_transforms_base",
+    "ecma_transforms_optimization",
+    "ecma_codegen",
+    "ecma_minifier",
+    "common",
+] }
+swc_ecma_parser = "0.152"
+swc_ecma_ast = "0.121"
+swc_ecma_codegen = "0.158"
+swc_ecma_minifier = "0.207"
+swc_ecma_transforms_base = "0.148"
+swc_common = { version = "0.40", features = ["sourcemap"] }
+console_error_panic_hook = { version = "0.1.7", optional = true }
+regex = "1.11"
+rayon = "1.10"
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3.49"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"

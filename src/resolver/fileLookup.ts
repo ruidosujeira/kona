@@ -43,11 +43,32 @@ export interface ILookupResult {
   tsConfigAtPath?: TsConfigAtPath;
 }
 
-const JS_EXTENSIONS = ['.js', '.jsx', '.mjs'];
-const TS_EXTENSIONS = ['.ts', '.tsx'];
+// ESM-first extension order for modern module resolution
+const JS_EXTENSIONS = ['.js', '.jsx', '.mjs', '.cjs'];
+const TS_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts'];
 
+// Modern ESM-first resolution order
 const TS_EXTENSIONS_FIRST = [...TS_EXTENSIONS, ...JS_EXTENSIONS];
 const JS_EXTENSIONS_FIRST = [...JS_EXTENSIONS, ...TS_EXTENSIONS];
+
+// ESM-specific extensions for package.json exports resolution
+// Used by resolvePackageExports for conditional resolution
+const _ESM_EXTENSIONS = ['.mjs', '.mts'];
+const _CJS_EXTENSIONS = ['.cjs', '.cts'];
+
+/**
+ * Check if file is ESM based on extension
+ */
+export function isESMFile(filePath: string): boolean {
+  return _ESM_EXTENSIONS.some(ext => filePath.endsWith(ext));
+}
+
+/**
+ * Check if file is CJS based on extension
+ */
+export function isCJSFile(filePath: string): boolean {
+  return _CJS_EXTENSIONS.some(ext => filePath.endsWith(ext));
+}
 
 function isFileSync(path: string): boolean {
   return fileExists(path) && fs.lstatSync(path).isFile();
@@ -199,12 +220,22 @@ function resolveSubmodule(
         }
       }
 
+      // Modern ESM "exports" field resolution (Node.js 12.7+)
+      // Supports conditional exports, subpath exports, and subpath patterns
       if (packageJSON['exports']) {
-        const exports = path.join(target, packageJSON['exports']);
-        const subresolution = resolveSubmodule(base, exports, resolveSubpath, false, jsFirst, isBrowserBuild);
-        if (subresolution.fileExists) {
+        const exportsResolved = resolvePackageExports(
+          packageJSON['exports'],
+          '.',
+          isBrowserBuild ? 'browser' : 'node',
+          target,
+          base,
+          resolveSubpath,
+          jsFirst,
+          isBrowserBuild
+        );
+        if (exportsResolved && exportsResolved.fileExists) {
           return {
-            ...subresolution,
+            ...exportsResolved,
             customIndex: true,
             isDirectoryIndex: true,
           };
@@ -238,6 +269,97 @@ function resolveSubmodule(
     absPath: path.join(base, target),
     fileExists: false,
   };
+}
+
+/**
+ * Resolve package.json "exports" field according to Node.js ESM resolution algorithm
+ * Supports:
+ * - Conditional exports (import, require, browser, node, default)
+ * - Subpath exports
+ * - Subpath patterns with wildcards
+ */
+function resolvePackageExports(
+  exports: any,
+  subpath: string,
+  condition: 'browser' | 'node',
+  target: string,
+  base: string,
+  resolveSubpath: SubPathResolver,
+  jsFirst: boolean,
+  isBrowserBuild: boolean
+): ILookupResult | undefined {
+  // Handle string exports (simple case)
+  if (typeof exports === 'string') {
+    const resolved = path.join(target, exports);
+    return resolveSubmodule(base, resolved, resolveSubpath, false, jsFirst, isBrowserBuild);
+  }
+
+  // Handle array exports (fallback chain)
+  if (Array.isArray(exports)) {
+    for (const exp of exports) {
+      const result = resolvePackageExports(exp, subpath, condition, target, base, resolveSubpath, jsFirst, isBrowserBuild);
+      if (result && result.fileExists) {
+        return result;
+      }
+    }
+    return undefined;
+  }
+
+  // Handle object exports (conditional or subpath)
+  if (typeof exports === 'object' && exports !== null) {
+    const keys = Object.keys(exports);
+
+    // Check if this is conditional exports (keys start with conditions like "import", "require", etc.)
+    const isConditional = keys.some(k => ['import', 'require', 'browser', 'node', 'default', 'types', 'module'].includes(k));
+
+    if (isConditional) {
+      // Resolve conditional exports in priority order
+      const conditions = isBrowserBuild
+        ? ['browser', 'import', 'module', 'default', 'require']
+        : ['node', 'import', 'module', 'require', 'default'];
+
+      for (const cond of conditions) {
+        if (exports[cond] !== undefined) {
+          const result = resolvePackageExports(exports[cond], subpath, condition, target, base, resolveSubpath, jsFirst, isBrowserBuild);
+          if (result && result.fileExists) {
+            return result;
+          }
+        }
+      }
+      return undefined;
+    }
+
+    // Handle subpath exports
+    if (subpath === '.') {
+      // Look for "." entry first
+      if (exports['.'] !== undefined) {
+        return resolvePackageExports(exports['.'], '.', condition, target, base, resolveSubpath, jsFirst, isBrowserBuild);
+      }
+    }
+
+    // Handle subpath patterns (e.g., "./*", "./lib/*")
+    for (const key of keys) {
+      if (key.includes('*')) {
+        const pattern = key.replace('*', '(.*)');
+        const regex = new RegExp(`^${pattern}$`);
+        const match = subpath.match(regex);
+        if (match && match[1]) {
+          const replacement = exports[key];
+          if (typeof replacement === 'string') {
+            const resolved = path.join(target, replacement.replace('*', match[1]));
+            const result = resolveSubmodule(base, resolved, resolveSubpath, false, jsFirst, isBrowserBuild);
+            if (result && result.fileExists) {
+              return result;
+            }
+          }
+        }
+      } else if (key === subpath) {
+        return resolvePackageExports(exports[key], subpath, condition, target, base, resolveSubpath, jsFirst, isBrowserBuild);
+      }
+    }
+  }
+
+  return undefined;
 }
 
 function loadTsConfig(packageDir: string) {

@@ -9,6 +9,7 @@ import { IModule } from '../moduleResolver/module';
 import { IOutputBundleConfigAdvanced } from '../output/OutputConfigInterface';
 import { distWriter, IWriterConfig } from '../output/distWriter';
 import { Concat } from '../utils/utils';
+import { getOptimizer, isWasmAvailable } from '../wasm/optimizer';
 
 export interface Bundle {
   config: IWriterConfig;
@@ -129,19 +130,40 @@ export function createBundle(props: IBundleProps): Bundle {
       }
 
       if (ctx.config.isProduction && !self.isCSSType && opts.uglify) {
-        const terserOpts: any = {
-          sourceMap: source.containsMaps
-            ? {
-                content: self.data.sourceMap,
-                includeSources: true,
-              }
-            : undefined,
-        };
         ctx.log.info('minify', self.config.absPath);
-        const result = await Terser.minify(self.contents, terserOpts);
-        self.contents = result.code;
-        if (source.containsMaps && result.map) {
-          sourceMap = result.map.toString();
+
+        // Try WASM optimizer first for better performance
+        if (isWasmAvailable()) {
+          ctx.log.info('minify:wasm', 'Using Rust WASM optimizer');
+          const optimizer = getOptimizer({
+            minify: {
+              compress: true,
+              mangle: true,
+              sourceMap: source.containsMaps,
+              dropDebugger: true,
+            },
+          });
+          const result = await optimizer.minify(self.contents, self.config.absPath);
+          self.contents = result.code;
+          if (source.containsMaps && result.source_map) {
+            sourceMap = result.source_map;
+          }
+          ctx.log.info('minify:wasm', `Compression ratio: ${(result.stats.compression_ratio * 100).toFixed(1)}%`);
+        } else {
+          // Fallback to Terser
+          const terserOpts: any = {
+            sourceMap: source.containsMaps
+              ? {
+                  content: self.data.sourceMap,
+                  includeSources: true,
+                }
+              : undefined,
+          };
+          const result = await Terser.minify(self.contents, terserOpts);
+          self.contents = result.code;
+          if (source.containsMaps && result.map) {
+            sourceMap = result.map.toString();
+          }
         }
       }
       // writing source maps

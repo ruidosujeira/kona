@@ -82,3 +82,49 @@ fusebox({
 ```
 
 ## [React demo](https://github.com/fuse-box/react-example)
+
+## ESM Support (2025)
+
+Full native ECMAScript Modules support:
+
+### Features
+
+- **Native ESM** - Full support for `.mjs`, `.mts` files
+- **`import.meta`** - `import.meta.url`, `import.meta.resolve()`
+- **Dynamic imports** - `import()` with code splitting
+- **Top-level await** - Async module initialization
+- **Package exports** - Full `package.json` exports field support
+- **Conditional exports** - `import`, `require`, `browser`, `node` conditions
+
+### Example
+
+```ts
+// ESM syntax
+import { foo } from './utils.mjs';
+import * as utils from './helpers.mts';
+
+// import.meta
+console.log(import.meta.url);
+const resolved = import.meta.resolve('./config.json');
+
+// Dynamic imports
+const module = await import('./lazy-module.js');
+
+// Top-level await
+const config = await fetch('/config.json').then(r => r.json());
+```
+
+## Rust WASM Optimizer
+
+High-performance tree-shaking and minification powered by Rust:
+
+```bash
+# Build WASM module for faster builds
+npm run build:wasm
+```
+
+### Performance
+
+- **2-5x faster** minification vs Terser
+- **3-10x faster** tree-shaking analysis
+- Automatic fallback to JS when WASM unavailable
