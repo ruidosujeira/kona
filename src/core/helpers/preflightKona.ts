@@ -1,5 +1,5 @@
 import { env } from '../../env';
-import { FuseBoxLogAdapter } from '../../fuseLog/FuseBoxLogAdapter';
+import { KonaLogAdapter } from '../../log/KonaLogAdapter';
 import { pluginAssumption } from '../../plugins/core/plugin_assumption';
 import { pluginCSS } from '../../plugins/core/plugin_css';
 import { pluginSass } from '../../plugins/core/plugin_sass';
@@ -7,15 +7,14 @@ import { parseVersion } from '../../utils/utils';
 import { Context } from '../context';
 import ts = require('typescript');
 import { WatcherReaction } from '../../watcher/watcher';
-import { finalizeFusebox } from './finalizeFusebox';
+import { finalizeKona } from './finalizeKona';
 
-export function preflightFusebox(ctx: Context) {
+export function preflightKona(ctx: Context) {
   const log = ctx.log;
 
   checkVersion(log);
 
-  log.fuseHeader({
-    // cacheFolder: ctx.cache && ctx.cache.rootFolder,
+  log.konaHeader({
     entry: ctx.config.entries[0],
     mode: ctx.config.isProduction ? 'production' : 'development',
     version: env.VERSION,
@@ -24,8 +23,8 @@ export function preflightFusebox(ctx: Context) {
   const plugins = [...ctx.config.plugins, pluginAssumption(), pluginCSS(), pluginSass()];
   plugins.forEach(plugin => plugin && plugin(ctx));
 
-  ctx.ict.on('complete', () => finalizeFusebox(ctx));
-  ctx.ict.on('rebundle', () => finalizeFusebox(ctx));
+  ctx.ict.on('complete', () => finalizeKona(ctx));
+  ctx.ict.on('rebundle', () => finalizeKona(ctx));
 
   setTimeout(() => {
     // push this one down the stack to it's triggered the last one
@@ -35,13 +34,11 @@ export function preflightFusebox(ctx: Context) {
       for (const item of reactionStack) {
         if (ExitableReactions.includes(item.reaction)) {
           log.stopStreaming();
-          //log.clearConsole();
           log.line();
           log.echo(' <yellow><bold> @warning Your configuration has changed.</bold> </yellow>');
           log.echo(' <yellow><bold> @warning Cache has been cleared</bold> </yellow>');
           log.echo(' <yellow><bold> @warning Exiting the process</bold> </yellow>');
 
-          //process.kill(process.pid);
           process.exit(0);
         }
       }
@@ -49,17 +46,17 @@ export function preflightFusebox(ctx: Context) {
   }, 0);
 }
 
-function checkVersion(log: FuseBoxLogAdapter) {
+function checkVersion(log: KonaLogAdapter) {
   const nodeVersion = parseVersion(process.version)[0];
-  if (nodeVersion < 11) {
+  if (nodeVersion < 20) {
     log.warn(
-      'You are using an older version of Node.js $version. Upgrade to at least Node.js v11 to get the maximium speed out of FuseBox',
+      'You are using an older version of Node.js $version. Upgrade to at least Node.js v20 for best performance with Kona',
       { version: process.version },
     );
   }
   const tsVersion = parseVersion(ts.version);
-  if (tsVersion[0] < 3) {
-    log.warn('You are using an older version of TypeScript $version. FuseBox builds might not work properly', {
+  if (tsVersion[0] < 5) {
+    log.warn('You are using an older version of TypeScript $version. Kona works best with TypeScript 5+', {
       version: tsVersion,
     });
   }

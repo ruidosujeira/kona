@@ -11,7 +11,10 @@ function conj(word, amount?: number) {
   return amount === 1 ? `1 ${word}` : `${amount} ${word}s`;
 }
 
-export class FuseBoxLogAdapter extends FuseLog {
+// Alias for backwards compatibility
+export type IKonaLoggerProps = IFuseLoggerProps;
+
+export class KonaLogAdapter extends FuseLog {
   private _warnings: Array<string>;
   private _errors: Array<string>;
   private streaming: boolean;
@@ -132,12 +135,18 @@ export class FuseBoxLogAdapter extends FuseLog {
     this.log('heading', str);
   }
 
-  fuseReloadHeader() {
+  konaReloadHeader() {
     this.line();
-    this.heading('⚙  <bold><green>FuseBox $version</green></bold>', { version: env.VERSION });
+    this.heading('⚡ <bold><green>Kona $version</green></bold>', { version: env.VERSION });
     this.line();
   }
-  fuseHeader(props: {
+
+  // Alias for backwards compatibility
+  fuseReloadHeader() {
+    this.konaReloadHeader();
+  }
+
+  konaHeader(props: {
     version: string;
     FTL?: boolean;
     mode: 'development' | 'production';
@@ -145,7 +154,7 @@ export class FuseBoxLogAdapter extends FuseLog {
     cacheFolder?: string;
   }) {
     this.line();
-    this.heading('⚙  <bold>FuseBox $version</bold>', props);
+    this.heading('⚡ <bold>Kona $version</bold>', props);
     this.heading('   Mode: <yellow>$mode</yellow>', props);
     this.heading('   Entry: <dim>$entry</dim>', props);
     if (props.cacheFolder) {
@@ -157,7 +166,18 @@ export class FuseBoxLogAdapter extends FuseLog {
     this.line();
   }
 
-  fuseFatal(header: string, messages?: Array<string>) {
+  // Alias for backwards compatibility
+  fuseHeader(props: {
+    version: string;
+    FTL?: boolean;
+    mode: 'development' | 'production';
+    entry: string;
+    cacheFolder?: string;
+  }) {
+    this.konaHeader(props);
+  }
+
+  konaFatal(header: string, messages?: Array<string>) {
     this.echo(this.indent + `<white><bold><bgRed> FATAL </bgRed></bold></white> <bold><red>${header}</bold></red>`);
 
     if (messages) {
@@ -166,6 +186,11 @@ export class FuseBoxLogAdapter extends FuseLog {
         this.echo(this.indent + '<red><bold>- ' + msg + '</bold></red>');
       });
     }
+  }
+
+  // Alias for backwards compatibility
+  fuseFatal(header: string, messages?: Array<string>) {
+    this.konaFatal(header, messages);
   }
 
   printBottomMessages() {
@@ -243,6 +268,10 @@ export class FuseBoxLogAdapter extends FuseLog {
   }
 }
 
-export function createFuseLogger(props: IFuseLoggerProps): FuseBoxLogAdapter {
-  return new FuseBoxLogAdapter(props);
+export function createKonaLogger(props: IFuseLoggerProps): KonaLogAdapter {
+  return new KonaLogAdapter(props);
 }
+
+// Backwards compatibility aliases
+export const FuseBoxLogAdapter = KonaLogAdapter;
+export const createFuseLogger = createKonaLogger;

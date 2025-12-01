@@ -48,7 +48,7 @@ task('fix-env', async () => {
   const package_json = require('./dist/package.json');
   await src('dist/env.js')
     .contentsOf('env.js', str => {
-      str = str.replace(/FUSE_ROOT\s*=\s*(appRoot.path)/, 'FUSE_ROOT = __dirname;');
+      str = str.replace(/KONA_ROOT\s*=\s*(appRoot.path)/, 'KONA_ROOT = __dirname;');
       str = str.replace(/VERSION\s*=\s*[^;]+/, `VERSION = '${package_json.version}'`);
 
       str = str.replace(
@@ -133,7 +133,7 @@ task('document', async ctx => {
     target: 'ES6',
   });
 
-  const typedocProject = typedocApp.convert(typedocApp.expandInputFiles(['src/core/FuseBox.ts']));
+  const typedocProject = typedocApp.convert(typedocApp.expandInputFiles(['src/core/kona.ts']));
 
   if (typedocProject) {
     // Project may not have converted correctly
@@ -144,16 +144,16 @@ task('document', async ctx => {
 });
 
 task('dev-thread', async ctx => {
-  const { fusebox } = require('./dist');
-  const fuse = fusebox({
+  const { kona } = require('./dist');
+  const konaInstance = kona({
     cache: { enabled: true },
     dependencies: { serverIgnoreExternals: true },
     entry: 'src/threading/worker_threads/ProcessThread.ts',
     logging: { level: 'succinct' },
     target: 'server',
   });
-  await fuse.runDev({
-    bundles: { app: 'fuse_thread.js', distRoot: 'dist/dev-threads' },
+  await konaInstance.runDev({
+    bundles: { app: 'kona_thread.js', distRoot: 'dist/dev-threads' },
   });
   //onComplete(({ server }) => server.start());
 });

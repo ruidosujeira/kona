@@ -1,12 +1,12 @@
 {
   "author": "Ivan Orlov",
   "bugs": {
-    "url": "https://github.com/fuse-box/fuse-box/issues"
+    "url": "https://github.com/ruidosujeira/kona/issues"
   },
   "collective": {
     "logo": "https://opencollective.com/opencollective/logo.txt",
     "type": "opencollective",
-    "url": "https://opencollective.com/fuse-box"
+    "url": "https://opencollective.com/kona"
   },
   "config": {
     "commitizen": {
@@ -56,7 +56,7 @@
     "typescript": "^5.7.2",
     "ws": "^8.18.0"
   },
-  "description": "Fuse-Box a bundler that does it right",
+  "description": "Kona - The blazing-fast JavaScript/TypeScript bundler",
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "@types/lodash.merge": "^4.6.9",
@@ -102,6 +102,7 @@
     "ts-node": "^10.9.2",
     "tslib": "^2.8.1",
     "typedoc": "^0.27.4",
+    "typedoc-plugin-markdown": "^4.4.1",
     "typescript-plugin-styled-components": "^3.0.0",
     "validate-commit-msg": "^2.14.0"
   },
@@ -109,39 +110,45 @@
     "node": ">= 20",
     "npm": ">= 10.0.0"
   },
-  "homepage": "https://github.com/fuse-box/fuse-box#readme",
+  "homepage": "https://github.com/ruidosujeira/kona#readme",
   "license": "MIT",
   "main": "index.js",
-  "name": "fuse-box",
+  "name": "kona",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/fuse-box/fuse-box.git"
+    "url": "git+https://github.com/ruidosujeira/kona.git"
+  },
+  "bin": {
+    "kona": "./dist/cli/cli.js"
   },
   "scripts": {
-    "alpha": "ts-node -T fuse publish-alpha",
+    "alpha": "ts-node -T kona publish-alpha",
     "build:wasm": "cd rust-wasm && wasm-pack build --target nodejs --out-dir pkg",
     "build:wasm:dev": "cd rust-wasm && wasm-pack build --target nodejs --dev --out-dir pkg",
     "build:wasm:release": "cd rust-wasm && wasm-pack build --target nodejs --release --out-dir pkg",
     "changelog": "run-s changelog:generate changelog:format",
     "changelog:format": "prettier --write CHANGELOG.md",
     "changelog:generate": "conventional-changelog -p angular -i CHANGELOG.md -s -r 0",
+    "cli": "ts-node -T src/cli/cli.ts",
     "codecov": "codecov",
     "commit": "git-cz",
     "commitmsg": "validate-commit-msg",
     "coverage": "jest --verbose --coverage",
     "coverage-ci": "jest --verbose --coverage --runInBand",
     "devDeps": "gulp installDevDeps",
-    "dist": "ts-node -T fuse dist",
-    "dist:full": "run-s build:wasm:release dist",
-    "document": "ts-node -T fuse document",
+    "dist": "ts-node -T kona dist",
+    "dist:full": "run-s build:wasm:release dist docs",
+    "docs": "typedoc --options typedoc.json",
+    "docs:serve": "npx serve docs",
+    "document": "ts-node -T kona document",
     "format": "prettier --list-different \"src/**/*.{js,json,md,ts,yml}\"",
     "format:fix": "prettier --write \"src/**/*.{js,json,md,ts,yml}\"",
-    "next": "ts-node -T fuse publish-next",
+    "next": "ts-node -T kona publish-next",
     "postinstall": "node -e \"try{require('./rust-wasm/pkg/kona_wasm.js')}catch(e){console.log('WASM module not built. Run npm run build:wasm for faster builds.')}\"",
     "test": "jest --verbose",
     "test-ci": "jest --verbose --runInBand",
     "test.watch": "jest --watch",
-    "typecheck": "ts-node -T fuse typecheck"
+    "typecheck": "ts-node -T kona typecheck"
   },
   "typings": "index.d.ts",
   "version": "4.0.1-next.8"

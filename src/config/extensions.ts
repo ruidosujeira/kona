@@ -11,6 +11,9 @@ export const TS_CJS_EXTENSIONS = ['.cts']; // TypeScript CommonJS
 // All executable extensions
 export const EXECUTABLE_EXTENSIONS = [...JS_EXTENSIONS, ...TS_EXTENSIONS];
 
+// WebAssembly extensions
+export const WASM_EXTENSIONS = ['.wasm'];
+
 // Asset extensions
 export const FONT_EXTENSIONS = ['.ttf', '.otf', '.woff', '.woff2', '.eot'];
 export const IMAGE_EXTENSIONS = ['.png', '.jpeg', '.jpg', '.gif', '.bmp', '.svg', '.webp', '.avif'];

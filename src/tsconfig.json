@@ -1,23 +1,49 @@
 {
   "compilerOptions": {
+    // TypeScript 5+ settings
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+
+    // Output
     "declaration": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "importHelpers": true,
-    "isolatedModules": false,
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "noEmitHelpers": true,
-    "noImplicitAny": false,
-    "noImplicitUseStrict": false,
-    "noLib": false,
-    "noUnusedLocals": true,
+    "declarationMap": true,
     "outDir": "../dist/",
-    "preserveConstEnums": true,
     "removeComments": true,
+
+    // Decorators (TS 5+ native)
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+    // Strict type checking
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": false,
+
+    // Module interop
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": false,
+
+    // Import helpers
+    "importHelpers": true,
+    "noEmitHelpers": true,
+
+    // Other
+    "preserveConstEnums": true,
     "skipLibCheck": true,
-    "target": "es2020",
-    "types": ["node"]
+    "forceConsistentCasingInFileNames": true,
+
+    // Types
+    "types": ["node"],
+
+    // JSX support
+    "jsx": "react-jsx",
+    "jsxImportSource": "react"
   },
   "exclude": [
     "dist",

@@ -1,0 +1,73 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/index.ts"],
+  "out": "docs",
+  "name": "Kona API Documentation",
+  "readme": "README.md",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeInternal": true,
+  "excludeExternals": true,
+  "hideGenerator": true,
+  "searchInComments": true,
+  "categorizeByGroup": true,
+  "categoryOrder": [
+    "Core",
+    "Plugins",
+    "Optimization",
+    "HMR",
+    "ESM",
+    "CLI",
+    "*"
+  ],
+  "navigationLinks": {
+    "GitHub": "https://github.com/ruidosujeira/kona",
+    "npm": "https://www.npmjs.com/package/kona"
+  },
+  "sidebarLinks": {
+    "Quick Start": "#quick-start",
+    "Configuration": "#configuration",
+    "Plugins": "#plugins"
+  },
+  "plugin": [
+    "typedoc-plugin-markdown"
+  ],
+  "theme": "default",
+  "lightHighlightTheme": "github-light",
+  "darkHighlightTheme": "github-dark",
+  "customCss": "",
+  "exclude": [
+    "**/node_modules/**",
+    "**/__tests__/**",
+    "**/playground/**",
+    "**/testUtils/**"
+  ],
+  "externalPattern": [
+    "**/node_modules/**"
+  ],
+  "excludeNotDocumented": false,
+  "validation": {
+    "notExported": true,
+    "invalidLink": true,
+    "notDocumented": false
+  },
+  "sort": [
+    "source-order",
+    "alphabetical"
+  ],
+  "kindSortOrder": [
+    "Function",
+    "Class",
+    "Interface",
+    "TypeAlias",
+    "Variable",
+    "Enum"
+  ],
+  "visibilityFilters": {
+    "protected": true,
+    "private": false,
+    "inherited": true,
+    "external": false
+  }
+}

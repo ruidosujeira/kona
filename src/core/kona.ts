@@ -5,9 +5,23 @@ import { bundleDev } from '../development/bundleDev';
 import { bundleProd } from '../production/bundleProd';
 import { IRunResponse } from './IRunResponse';
 import { createContext, ICreateContextProps } from './context';
-import { preflightFusebox } from './helpers/preflightFusebox';
+import { preflightKona } from './helpers/preflightKona';
 
-export function fusebox(publicConfig: IPublicConfig) {
+/**
+ * Create a Kona bundler instance
+ *
+ * @example
+ * ```ts
+ * import { kona } from 'kona';
+ *
+ * kona({
+ *   target: 'browser',
+ *   entry: 'src/index.tsx',
+ *   devServer: true,
+ * }).runDev();
+ * ```
+ */
+export function kona(publicConfig: IPublicConfig) {
   async function execute(props: ICreateContextProps): Promise<IRunResponse> {
     let response: IRunResponse;
     const ctx = createContext(props);
@@ -15,7 +29,7 @@ export function fusebox(publicConfig: IPublicConfig) {
     ctx.isWorking = true;
     ctx.ict.sync('init', { ctx: ctx });
 
-    preflightFusebox(ctx);
+    preflightKona(ctx);
     switch (props.envType) {
       case EnvironmentType.DEVELOPMENT:
         try {
