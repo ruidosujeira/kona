@@ -404,6 +404,9 @@ impl TreeShaker {
 
         let final_size = result_code.len();
 
+        let exports_removed_count = removed_exports.len();
+        let imports_removed_count = removed_imports.len();
+
         TreeShakeResult {
             code: result_code,
             source_map: None,
@@ -412,8 +415,8 @@ impl TreeShaker {
             stats: TreeShakeStats {
                 original_size,
                 final_size,
-                exports_removed: removed_exports.len(),
-                imports_removed: removed_imports.len(),
+                exports_removed: exports_removed_count,
+                imports_removed: imports_removed_count,
                 dead_blocks_removed,
             },
         }
