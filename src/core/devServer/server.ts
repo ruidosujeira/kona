@@ -415,18 +415,29 @@ export class DevServer {
    * Start file watcher
    */
   private startWatcher(): void {
-    const watchPaths = this.options.watch.include || ['src/**/*'];
-    const ignored = this.options.watch.exclude || ['**/node_modules/**', '**/.git/**'];
+    const watchPaths = this.options.watch.include || ['src'];
+    const ignored = this.options.watch.exclude || ['**/node_modules/**', '**/.git/**', '**/dist/**'];
+
+    console.log(`  ${this.colorize('👀', 'dim')} Watching: ${watchPaths.join(', ')}`);
 
     this.watcher = watch(watchPaths, {
       ignored,
       persistent: true,
       ignoreInitial: true,
+      usePolling: false,
+      awaitWriteFinish: {
+        stabilityThreshold: 50,
+        pollInterval: 10,
+      },
     });
 
-    this.watcher.on('change', (filePath) => this.handleFileChange(filePath, 'change'));
+    this.watcher.on('change', (filePath) => {
+      console.log(`  ${this.colorize('📝', 'yellow')} Changed: ${filePath}`);
+      this.handleFileChange(filePath, 'change');
+    });
     this.watcher.on('add', (filePath) => this.handleFileChange(filePath, 'add'));
     this.watcher.on('unlink', (filePath) => this.handleFileChange(filePath, 'unlink'));
+    this.watcher.on('error', (error) => console.error('Watcher error:', error));
   }
 
   private handleFileChange(filePath: string, event: string): void {
