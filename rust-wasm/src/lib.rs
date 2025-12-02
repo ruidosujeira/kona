@@ -8,6 +8,7 @@ mod tree_shaker;
 mod utils;
 mod parser;
 mod transformer;
+mod bundler;
 
 use wasm_bindgen::prelude::*;
 
@@ -15,6 +16,7 @@ pub use minifier::*;
 pub use tree_shaker::*;
 pub use parser::*;
 pub use transformer::*;
+pub use bundler::*;
 
 /// Initialize the WASM module with panic hook for better error messages
 #[wasm_bindgen(start)]

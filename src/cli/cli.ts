@@ -11,6 +11,7 @@ import * as path from 'path';
 import { performance } from 'perf_hooks';
 import { Bundler, BundlerOptions } from '../core/bundler/bundler';
 import { ParallelBundler, FileCache } from '../core/bundler/parallelBundler';
+import { TurboBundler } from '../core/bundler/turboBundler';
 import { DevServer, DevServerOptions } from '../core/devServer/server';
 
 // CLI version
@@ -595,26 +596,17 @@ async function runBuild(entry?: string, options: Record<string, any> = {}): Prom
   const config = await loadConfig(options.config);
   const outdir = config.output?.dir || 'dist';
   
-  // Use parallel bundler with cache
-  const cache = new FileCache('.kona-cache');
-  
   try {
-    const bundler = new ParallelBundler({
+    // Use TurboBundler for maximum performance
+    const bundler = new TurboBundler({
       entry: entryPoint,
       outdir,
-      format: config.format || 'esm',
-      target: config.target || 'browser',
-      minify: options.minify ?? config.minify ?? false,
-      sourcemap: options.sourcemap ?? config.sourcemap ?? false,
-      treeshake: config.treeshake ?? true,
       external: config.external || [],
-      alias: config.alias || {},
       define: {
         'process.env.NODE_ENV': '"production"',
         ...config.define,
       },
-      cache,
-      parallel: true,
+      minify: options.minify ?? config.minify ?? false,
     });
 
     const result = await bundler.build();
