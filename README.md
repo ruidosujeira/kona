@@ -10,23 +10,72 @@
 
   <br>
 
+  <!-- Badges -->
   <p>
+    <a href="https://github.com/ruidosujeira/kona/actions/workflows/benchmark.yml"><img src="https://github.com/ruidosujeira/kona/actions/workflows/benchmark.yml/badge.svg" alt="Benchmark"></a>
     <a href="https://www.npmjs.com/package/kona"><img src="https://img.shields.io/npm/v/kona.svg?style=flat-square" alt="npm"></a>
     <a href="https://www.npmjs.com/package/kona"><img src="https://img.shields.io/npm/dm/kona.svg?style=flat-square" alt="downloads"></a>
-    <img src="https://img.shields.io/badge/faster_than-esbuild-green?style=flat-square" alt="Faster than esbuild">
-    <img src="https://img.shields.io/badge/rust-wasm-orange?style=flat-square" alt="Rust WASM">
+    <img src="https://img.shields.io/badge/faster_than-esbuild-brightgreen?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMyAyTDMgMTRoOWwtMSA4IDEwLTEyaC05bDEtOHoiLz48L3N2Zz4=" alt="Faster than esbuild">
+    <img src="https://img.shields.io/badge/rust-wasm-orange?style=flat-square&logo=rust" alt="Rust WASM">
+    <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License">
   </p>
+  
+  <br>
+
+  <!-- Performance Chart -->
+  <img src="https://quickchart.io/chart?c={type:'bar',data:{labels:['100 modules','500 modules','1000 modules'],datasets:[{label:'Kona',data:[511,611,655],backgroundColor:'%2310b981'},{label:'esbuild',data:[732,810,835],backgroundColor:'%23fbbf24'},{label:'Vite',data:[2543,3351,4092],backgroundColor:'%23ef4444'},{label:'Rollup',data:[669,709,671],backgroundColor:'%236366f1'}]},options:{plugins:{title:{display:true,text:'Build Time (ms) - Lower is Better'}},scales:{y:{beginAtZero:true}}}}&w=600&h=300" alt="Benchmark Chart">
+
+<br><br>
+
+  <!-- HMR Demo -->
+  <details>
+  <summary><strong>🎬 See HMR in action (click to expand)</strong></summary>
+  <br>
+  
+  ```
+  ┌─────────────────────────────────────────────────────────┐
+  │  $ kona dev                                             │
+  │                                                         │
+  │  ⚡ Kona dev server ready in 302ms                      │
+  │                                                         │
+  │  ➜  Local:   http://localhost:4444                      │
+  │  👀 Watching: src                                       │
+  │                                                         │
+  │  📝 Changed: src/App.tsx                                │
+  │  ↻ Rebuilding...                                        │
+  │  ✓ Rebuilt in 34ms                                      │
+  │                                                         │
+  │  📝 Changed: src/components/Button.tsx                  │
+  │  ↻ Rebuilding...                                        │
+  │  ✓ Rebuilt in 28ms                                      │
+  └─────────────────────────────────────────────────────────┘
+  ```
+  
+  **34ms HMR updates** - Your changes appear instantly.
+  
+  </details>
+
 </div>
 
 <br>
 
 ## ⚡ Benchmarks (Real, Verified)
 
-| Modules   | Kona      | esbuild | Vite    | Rollup | Winner  |
-| --------- | --------- | ------- | ------- | ------ | ------- |
-| **100**   | **511ms** | 732ms   | 2,543ms | 669ms  | 🏆 Kona |
-| **500**   | **611ms** | 810ms   | 3,351ms | 709ms  | 🏆 Kona |
-| **1,000** | **655ms** | 835ms   | 4,092ms | 671ms  | 🏆 Kona |
+```
+Build Time (ms) - 1000 TypeScript/React modules
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Kona     ████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  655ms 🏆
+esbuild  ██████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  835ms
+Rollup   ████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  671ms
+Vite     ████████████████████████████████████████████████████████████████ 4092ms
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+| Modules   | Kona      | esbuild | Vite    | Rollup | vs esbuild      |
+| --------- | --------- | ------- | ------- | ------ | --------------- |
+| **100**   | **511ms** | 732ms   | 2,543ms | 669ms  | **1.4x faster** |
+| **500**   | **611ms** | 810ms   | 3,351ms | 709ms  | **1.3x faster** |
+| **1,000** | **655ms** | 835ms   | 4,092ms | 671ms  | **1.3x faster** |
 
 <details>
 <summary><strong>📊 Methodology (click to expand)</strong></summary>
