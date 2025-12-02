@@ -11,8 +11,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { KonaParser, ParseResult, ImportInfo } from '../parser/parser';
-import { ModuleResolver, ResolveResult } from '../resolver/moduleResolver';
+import { KonaParser, ParseResult } from '../parser/parser';
+import { ModuleResolver } from '../resolver/moduleResolver';
 
 // Module representation
 export interface Module {
@@ -171,7 +171,6 @@ export interface OnTransformResult {
 export class Bundler {
   private options: Required<BundlerOptions>;
   private modules: Map<string, Module> = new Map();
-  private chunks: Map<string, Chunk> = new Map();
   private resolver: ModuleResolver;
   private parser: KonaParser;
   
@@ -494,7 +493,7 @@ export class Bundler {
     while (changed) {
       changed = false;
       
-      for (const [path, module] of this.modules) {
+      for (const [_path, module] of this.modules) {
         if (module.chunk) continue;
 
         // Find a dependent with a chunk
@@ -511,7 +510,7 @@ export class Bundler {
 
     // Fallback: assign to first entry chunk
     const firstEntryChunk = [...this.modules.values()].find(m => m.isEntry)?.chunk;
-    for (const [path, module] of this.modules) {
+    for (const [_path, module] of this.modules) {
       if (!module.chunk) {
         module.chunk = firstEntryChunk || 'main';
       }
@@ -519,7 +518,7 @@ export class Bundler {
   }
 
   private createSingleChunk(): void {
-    for (const [path, module] of this.modules) {
+    for (const [_path, module] of this.modules) {
       module.chunk = 'bundle';
     }
   }
@@ -531,7 +530,7 @@ export class Bundler {
     // Group modules by chunk
     const chunkModules = new Map<string, Module[]>();
     
-    for (const [path, module] of this.modules) {
+    for (const [_path, module] of this.modules) {
       const chunkId = module.chunk || 'main';
       if (!chunkModules.has(chunkId)) {
         chunkModules.set(chunkId, []);

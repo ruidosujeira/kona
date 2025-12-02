@@ -8,7 +8,6 @@
  */
 
 import * as ts from 'typescript';
-import * as path from 'path';
 
 // AST Node types
 export interface KonaAST {

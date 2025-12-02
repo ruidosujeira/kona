@@ -11,7 +11,6 @@
 import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as crypto from 'crypto';
 import { WebSocketServer, WebSocket } from 'ws';
 import { watch, FSWatcher } from 'chokidar';
 import { Bundler, BundleOutput, BundlerOptions } from '../bundler/bundler';
