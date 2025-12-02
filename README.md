@@ -6,6 +6,8 @@
   
   <p><strong>Faster than esbuild. Written in Rust + TypeScript.</strong></p>
 
+  > ⚠️ **Alpha** - Fast, functional, but still evolving. Feedback welcome!
+
   <br>
 
   <p>
