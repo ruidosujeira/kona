@@ -41,8 +41,11 @@ export interface TurboModule {
   source: string;
   code: string;
   imports: string[];
+  dynamicImports: string[];
   isEntry: boolean;
+  isDynamic: boolean;
   hash: string;
+  chunk?: string;
 }
 
 export interface TurboBundlerOptions {
@@ -51,10 +54,20 @@ export interface TurboBundlerOptions {
   external?: string[];
   define?: Record<string, string>;
   minify?: boolean;
+  splitting?: boolean;
+}
+
+export interface TurboChunk {
+  name: string;
+  modules: string[];
+  code: string;
+  size: number;
+  isEntry: boolean;
 }
 
 export interface TurboBuildResult {
   code: string;
+  chunks: TurboChunk[];
   modules: number;
   size: number;
   time: number;
@@ -243,6 +256,7 @@ export class TurboBundler {
       external: options.external || [],
       define: options.define || {},
       minify: options.minify ?? false,
+      splitting: options.splitting ?? false,
     };
   }
 
@@ -292,6 +306,7 @@ export class TurboBundler {
 
     return {
       code,
+      chunks: [{ name: 'bundle.js', modules: [...this.modules.keys()], code, size: Buffer.byteLength(code, 'utf-8'), isEntry: true }],
       modules: this.modules.size,
       size: Buffer.byteLength(code, 'utf-8'),
       time: buildTime,
@@ -315,13 +330,18 @@ export class TurboBundler {
       ? wasmParser.extract_imports_fast(source).split('\n').filter(Boolean)
       : this.extractImports(source);
 
+    // Extract dynamic imports separately
+    const dynamicImports = this.extractDynamicImports(source);
+
     const mod: TurboModule = {
       id: path.relative(process.cwd(), modulePath).replace(/\\/g, '/'),
       path: modulePath,
       source,
       code: '', // Will be filled during transform
-      imports,
+      imports: imports.filter(i => !dynamicImports.includes(i)),
+      dynamicImports,
       isEntry,
+      isDynamic: false,
       hash,
     };
 
@@ -337,6 +357,18 @@ export class TurboBundler {
     while ((match = regex.exec(source)) !== null) {
       const imp = match[1] || match[2] || match[3] || match[4];
       if (imp) imports.push(imp);
+    }
+    
+    return [...new Set(imports)];
+  }
+
+  private extractDynamicImports(source: string): string[] {
+    const imports: string[] = [];
+    const regex = /import\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
+    
+    let match;
+    while ((match = regex.exec(source)) !== null) {
+      if (match[1]) imports.push(match[1]);
     }
     
     return [...new Set(imports)];
