@@ -10,6 +10,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { performance } from 'perf_hooks';
 import { Bundler, BundlerOptions } from '../core/bundler/bundler';
+import { ParallelBundler, FileCache } from '../core/bundler/parallelBundler';
 import { DevServer, DevServerOptions } from '../core/devServer/server';
 
 // CLI version
@@ -592,29 +593,30 @@ async function runBuild(entry?: string, options: Record<string, any> = {}): Prom
 
   // Load config file if exists
   const config = await loadConfig(options.config);
+  const outdir = config.output?.dir || 'dist';
   
-  // Bundler options
-  const bundlerOptions: BundlerOptions = {
-    entry: entryPoint,
-    outdir: config.output?.dir || 'dist',
-    format: config.format || 'esm',
-    target: config.target || 'browser',
-    minify: options.minify ?? config.minify ?? true,
-    sourcemap: options.sourcemap ?? config.sourcemap ?? true,
-    splitting: config.splitting ?? true,
-    treeshake: config.treeshake ?? true,
-    external: config.external || [],
-    alias: config.alias || {},
-    define: {
-      'process.env.NODE_ENV': '"production"',
-      ...config.define,
-    },
-    plugins: config.plugins || [],
-    onProgress: (msg) => logInfo(msg),
-  };
-
+  // Use parallel bundler with cache
+  const cache = new FileCache('.kona-cache');
+  
   try {
-    const bundler = new Bundler(bundlerOptions);
+    const bundler = new ParallelBundler({
+      entry: entryPoint,
+      outdir,
+      format: config.format || 'esm',
+      target: config.target || 'browser',
+      minify: options.minify ?? config.minify ?? false,
+      sourcemap: options.sourcemap ?? config.sourcemap ?? false,
+      treeshake: config.treeshake ?? true,
+      external: config.external || [],
+      alias: config.alias || {},
+      define: {
+        'process.env.NODE_ENV': '"production"',
+        ...config.define,
+      },
+      cache,
+      parallel: true,
+    });
+
     const result = await bundler.build();
     await bundler.write(result);
 
@@ -625,17 +627,10 @@ async function runBuild(entry?: string, options: Record<string, any> = {}): Prom
     console.log('');
     
     // Show output stats
-    console.log(`  ${colors.dim}Output:${colors.reset} ${bundlerOptions.outdir}`);
-    console.log(`  ${colors.dim}Chunks:${colors.reset} ${result.chunks.length}`);
-    console.log(`  ${colors.dim}Modules:${colors.reset} ${result.stats.modules}`);
-    console.log(`  ${colors.dim}Size:${colors.reset} ${formatSize(result.stats.totalSize)}`);
-    console.log('');
-
-    // Show chunk details
-    for (const chunk of result.chunks) {
-      const icon = chunk.isEntry ? '📦' : '📄';
-      console.log(`  ${icon} ${chunk.name}.js ${colors.dim}(${formatSize(chunk.size)})${colors.reset}`);
-    }
+    console.log(`  ${colors.dim}Output:${colors.reset} ${outdir}`);
+    console.log(`  ${colors.dim}Modules:${colors.reset} ${result.modules}`);
+    console.log(`  ${colors.dim}Size:${colors.reset} ${formatSize(result.size)}`);
+    console.log(`  ${colors.dim}Time:${colors.reset} ${result.time}ms (internal)`);
     console.log('');
 
   } catch (error: any) {
