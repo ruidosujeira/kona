@@ -14,14 +14,16 @@ import { ModuleResolver } from '../resolver/moduleResolver';
 
 const NUM_WORKERS = Math.max(1, os.cpus().length - 1);
 
-// Try to load WASM parser for faster import extraction
+// Try to load WASM modules for faster processing
 let wasmParser: any = null;
+let wasmTransformer: any = null;
 try {
   const wasm = require('../../../rust-wasm/pkg/kona_wasm.js');
   wasmParser = new wasm.Parser();
-  console.log('  ⚡ Using WASM parser');
+  wasmTransformer = new wasm.Transformer();
+  console.log('  ⚡ Using WASM parser + transformer');
 } catch (e) {
-  // WASM not available, will use JS parser
+  // WASM not available, will use JS fallback
 }
 
 // Module representation
@@ -354,8 +356,13 @@ export class ParallelBundler {
     // Transform TypeScript/JSX if needed
     const ext = path.extname(module.path).toLowerCase();
     if (['.ts', '.tsx', '.jsx'].includes(ext)) {
-      const result = this.parser.transform(code);
-      code = result.code;
+      // Use WASM transformer if available (much faster)
+      if (wasmTransformer) {
+        code = wasmTransformer.transform_code(code, module.path);
+      } else {
+        const result = this.parser.transform(code);
+        code = result.code;
+      }
     }
 
     return code;
