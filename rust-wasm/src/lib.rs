@@ -3,12 +3,12 @@
 //! This module provides Rust-powered optimizations for the Kona bundler,
 //! exposed via WebAssembly for seamless JavaScript integration.
 
-mod minifier;
-mod tree_shaker;
+pub mod minifier;
+pub mod tree_shaker;
 mod utils;
-mod parser;
-mod transformer;
-mod bundler;
+pub mod parser;
+pub mod transformer;
+pub mod bundler;
 
 use wasm_bindgen::prelude::*;
 

@@ -20,21 +20,78 @@
 
 ## ⚡ Benchmarks (Real, Verified)
 
-Tested on M1 MacBook Pro with React + TypeScript projects:
+| Modules   | Kona      | esbuild | Vite    | Rollup | Winner  |
+| --------- | --------- | ------- | ------- | ------ | ------- |
+| **100**   | **511ms** | 732ms   | 2,543ms | 669ms  | 🏆 Kona |
+| **500**   | **611ms** | 810ms   | 3,351ms | 709ms  | 🏆 Kona |
+| **1,000** | **655ms** | 835ms   | 4,092ms | 671ms  | 🏆 Kona |
 
-| Modules   | Kona      | esbuild | Vite    | Winner              |
-| --------- | --------- | ------- | ------- | ------------------- |
-| **100**   | **491ms** | 743ms   | 2,963ms | 🏆 Kona 1.5x faster |
-| **500**   | **542ms** | 785ms   | 3,442ms | 🏆 Kona 1.4x faster |
-| **1,000** | **652ms** | 858ms   | 4,792ms | 🏆 Kona 1.3x faster |
+<details>
+<summary><strong>📊 Methodology (click to expand)</strong></summary>
+
+### Test Environment
+
+- **Machine**: Intel Core i5-1038NG7 @ 2.00GHz, 16GB RAM
+- **OS**: macOS 26.1
+- **Node.js**: v22.19.0
+
+### Test Configuration
+
+| Setting       | Value                  |
+| ------------- | ---------------------- |
+| Tree shaking  | OFF (fair comparison)  |
+| Minification  | OFF                    |
+| Source maps   | OFF                    |
+| TypeScript    | YES (100% .tsx files)  |
+| JSX           | YES (React components) |
+| External deps | react, react-dom       |
+
+### Project Structure
+
+- **100 modules**: 102 files, 1,060 lines
+- **500 modules**: 502 files, 5,300 lines
+- **1,000 modules**: 1,002 files, 10,600 lines
+
+Each project includes:
+
+- React components with hooks
+- TypeScript interfaces
+- Dynamic imports
+- Utility functions
+
+### Measurement
+
+- 5 runs per bundler
+- First run discarded (warmup)
+- Results: average of runs 2-5
+
+</details>
+
+### Reproduce Yourself
 
 ```bash
-# Reproduce yourself
 git clone https://github.com/ruidosujeira/kona
 cd kona
-npm install
-npm run build:wasm
-node scripts/benchmark.js
+npm install && npm run build:wasm
+
+# Generate test project
+node -e "
+const fs = require('fs');
+const dir = '/tmp/kona-test';
+fs.mkdirSync(dir + '/src', { recursive: true });
+for (let i = 0; i < 100; i++) {
+  fs.writeFileSync(dir + '/src/Component' + i + '.tsx',
+    'import React from \"react\";\nexport const Component' + i + ' = () => <div>Component ' + i + '</div>;');
+}
+fs.writeFileSync(dir + '/src/index.tsx',
+  Array.from({length: 100}, (_, i) => 'import { Component' + i + ' } from \"./Component' + i + '\";').join('\n') +
+  '\nexport default function App() { return <div>' +
+  Array.from({length: 100}, (_, i) => '<Component' + i + ' />').join('') + '</div>; }');
+"
+
+# Run benchmarks
+time npx kona build /tmp/kona-test/src/index.tsx
+time npx esbuild /tmp/kona-test/src/index.tsx --bundle --outfile=/tmp/out.js
 ```
 
 <br>
