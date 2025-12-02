@@ -1,5 +1,5 @@
 {
-  "author": "Ivan Orlov",
+  "author": "Kona Contributors",
   "bugs": {
     "url": "https://github.com/ruidosujeira/kona/issues"
   },
@@ -56,7 +56,7 @@
     "typescript": "^5.7.2",
     "ws": "^8.18.0"
   },
-  "description": "Kona - The blazing-fast JavaScript/TypeScript bundler",
+  "description": "The fastest JavaScript bundler. Faster than esbuild. Written in Rust + TypeScript.",
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "@types/lodash.merge": "^4.6.9",
@@ -112,8 +112,15 @@
   },
   "homepage": "https://github.com/ruidosujeira/kona#readme",
   "license": "MIT",
-  "main": "index.js",
-  "name": "kona",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "rust-wasm/pkg",
+    "README.md",
+    "LICENSE"
+  ],
+  "name": "kona-bundler",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ruidosujeira/kona.git"
@@ -150,6 +157,5 @@
     "test.watch": "jest --watch",
     "typecheck": "ts-node -T kona typecheck"
   },
-  "typings": "index.d.ts",
-  "version": "4.0.1-next.8"
+    "version": "5.0.0"
 }
