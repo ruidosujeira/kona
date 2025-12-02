@@ -8,12 +8,21 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { Worker, isMainThread, parentPort, workerData } from 'worker_threads';
 import * as os from 'os';
-import { KonaParser, ParseResult } from '../parser/parser';
+import { KonaParser } from '../parser/parser';
 import { ModuleResolver } from '../resolver/moduleResolver';
 
 const NUM_WORKERS = Math.max(1, os.cpus().length - 1);
+
+// Try to load WASM parser for faster import extraction
+let wasmParser: any = null;
+try {
+  const wasm = require('../../../rust-wasm/pkg/kona_wasm.js');
+  wasmParser = new wasm.Parser();
+  console.log('  ⚡ Using WASM parser');
+} catch (e) {
+  // WASM not available, will use JS parser
+}
 
 // Module representation
 export interface Module {
@@ -266,8 +275,10 @@ export class ParallelBundler {
         .filter((d): d is { path: string; isEntry: boolean; isDynamic: boolean } => d !== null);
     }
 
-    // Quick scan for imports (faster than full parse)
-    const dependencies = this.quickScanImports(source);
+    // Use WASM parser if available, otherwise fall back to JS regex
+    const dependencies = wasmParser 
+      ? wasmParser.extract_imports_fast(source).split('\n').filter(Boolean)
+      : this.quickScanImports(source);
     const resolvedDeps: Array<{ path: string; isEntry: boolean; isDynamic: boolean }> = [];
 
     for (const dep of dependencies) {
