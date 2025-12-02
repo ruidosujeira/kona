@@ -180,7 +180,7 @@ time npx esbuild /tmp/kona-test/src/index.tsx --bundle --outfile=/tmp/out.js
 
 ```bash
 # Install
-npm install kona --save-dev
+npm install kona-bundler --save-dev
 
 # Build
 npx kona build src/index.tsx
