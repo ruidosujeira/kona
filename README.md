@@ -13,8 +13,8 @@
   <!-- Badges -->
   <p>
     <a href="https://github.com/ruidosujeira/kona/actions/workflows/benchmark.yml"><img src="https://github.com/ruidosujeira/kona/actions/workflows/benchmark.yml/badge.svg" alt="Benchmark"></a>
-    <a href="https://www.npmjs.com/package/kona"><img src="https://img.shields.io/npm/v/kona.svg?style=flat-square" alt="npm"></a>
-    <a href="https://www.npmjs.com/package/kona"><img src="https://img.shields.io/npm/dm/kona.svg?style=flat-square" alt="downloads"></a>
+    <a href="https://www.npmjs.com/package/kona-bundler"><img src="https://img.shields.io/npm/v/kona.svg?style=flat-square" alt="npm"></a>
+    <a href="https://www.npmjs.com/package/kona-bundler"><img src="https://img.shields.io/npm/dm/kona.svg?style=flat-square" alt="downloads"></a>
     <img src="https://img.shields.io/badge/faster_than-esbuild-brightgreen?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMyAyTDMgMTRoOWwtMSA4IDEwLTEyaC05bDEtOHoiLz48L3N2Zz4=" alt="Faster than esbuild">
     <img src="https://img.shields.io/badge/rust-wasm-orange?style=flat-square&logo=rust" alt="Rust WASM">
     <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License">
