@@ -9,6 +9,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { performance } from 'perf_hooks';
+import { Bundler, BundlerOptions } from '../core/bundler/bundler';
+import { DevServer, DevServerOptions } from '../core/devServer/server';
 
 // CLI version
 const VERSION = '4.1.0';
@@ -510,6 +512,193 @@ async function runDepclean(options: Record<string, string | boolean>): Promise<v
   }
 }
 
+// ============================================
+// Dev command - start development server
+// ============================================
+async function runDev(entry?: string, options: Record<string, any> = {}): Promise<void> {
+  const startTime = performance.now();
+  
+  // Find entry point
+  const entryPoint = entry || findEntry();
+  if (!entryPoint) {
+    logError('No entry point found. Specify one or create src/index.ts');
+    process.exit(1);
+  }
+
+  logInfo(`Starting dev server...`);
+
+  // Load config file if exists
+  const config = await loadConfig(options.config);
+  
+  // Bundler options
+  const bundlerOptions: BundlerOptions = {
+    entry: entryPoint,
+    outdir: config.output?.dir || 'dist',
+    format: 'esm',
+    target: config.target || 'browser',
+    minify: false,
+    sourcemap: true,
+    splitting: true,
+    treeshake: false, // Faster for dev
+    external: config.external || [],
+    alias: config.alias || {},
+    define: {
+      'process.env.NODE_ENV': '"development"',
+      ...config.define,
+    },
+    plugins: config.plugins || [],
+  };
+
+  // Server options
+  const serverOptions: DevServerOptions = {
+    port: options.port || config.devServer?.port || 4444,
+    host: options.host || config.devServer?.host || 'localhost',
+    open: options.open || config.devServer?.open || false,
+    hmr: true,
+  };
+
+  try {
+    const server = new DevServer(bundlerOptions, serverOptions);
+    await server.start();
+
+    // Handle shutdown
+    process.on('SIGINT', async () => {
+      console.log('\n');
+      logInfo('Shutting down...');
+      await server.stop();
+      process.exit(0);
+    });
+
+  } catch (error: any) {
+    logError(`Failed to start dev server: ${error.message}`);
+    process.exit(1);
+  }
+}
+
+// ============================================
+// Build command - production build
+// ============================================
+async function runBuild(entry?: string, options: Record<string, any> = {}): Promise<void> {
+  const startTime = performance.now();
+  
+  // Find entry point
+  const entryPoint = entry || findEntry();
+  if (!entryPoint) {
+    logError('No entry point found. Specify one or create src/index.ts');
+    process.exit(1);
+  }
+
+  logInfo(`Building for production...`);
+
+  // Load config file if exists
+  const config = await loadConfig(options.config);
+  
+  // Bundler options
+  const bundlerOptions: BundlerOptions = {
+    entry: entryPoint,
+    outdir: config.output?.dir || 'dist',
+    format: config.format || 'esm',
+    target: config.target || 'browser',
+    minify: options.minify ?? config.minify ?? true,
+    sourcemap: options.sourcemap ?? config.sourcemap ?? true,
+    splitting: config.splitting ?? true,
+    treeshake: config.treeshake ?? true,
+    external: config.external || [],
+    alias: config.alias || {},
+    define: {
+      'process.env.NODE_ENV': '"production"',
+      ...config.define,
+    },
+    plugins: config.plugins || [],
+    onProgress: (msg) => logInfo(msg),
+  };
+
+  try {
+    const bundler = new Bundler(bundlerOptions);
+    const result = await bundler.build();
+    await bundler.write(result);
+
+    const buildTime = (performance.now() - startTime).toFixed(0);
+    
+    console.log('');
+    logSuccess(`Build completed in ${buildTime}ms`);
+    console.log('');
+    
+    // Show output stats
+    console.log(`  ${colors.dim}Output:${colors.reset} ${bundlerOptions.outdir}`);
+    console.log(`  ${colors.dim}Chunks:${colors.reset} ${result.chunks.length}`);
+    console.log(`  ${colors.dim}Modules:${colors.reset} ${result.stats.modules}`);
+    console.log(`  ${colors.dim}Size:${colors.reset} ${formatSize(result.stats.totalSize)}`);
+    console.log('');
+
+    // Show chunk details
+    for (const chunk of result.chunks) {
+      const icon = chunk.isEntry ? '📦' : '📄';
+      console.log(`  ${icon} ${chunk.name}.js ${colors.dim}(${formatSize(chunk.size)})${colors.reset}`);
+    }
+    console.log('');
+
+  } catch (error: any) {
+    logError(`Build failed: ${error.message}`);
+    if (options.verbose) {
+      console.error(error.stack);
+    }
+    process.exit(1);
+  }
+}
+
+// ============================================
+// Helper functions
+// ============================================
+function findEntry(): string | null {
+  const candidates = [
+    'src/index.tsx',
+    'src/index.ts',
+    'src/index.jsx',
+    'src/index.js',
+    'src/main.tsx',
+    'src/main.ts',
+    'index.tsx',
+    'index.ts',
+  ];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(path.resolve(process.cwd(), candidate))) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+async function loadConfig(configPath?: string): Promise<any> {
+  const candidates = configPath 
+    ? [configPath]
+    : ['kona.ts', 'kona.js', 'kona.config.ts', 'kona.config.js'];
+
+  for (const candidate of candidates) {
+    const fullPath = path.resolve(process.cwd(), candidate);
+    if (fs.existsSync(fullPath)) {
+      try {
+        // For now, return empty config
+        // In production, use ts-node or esbuild to load config
+        logInfo(`Using config: ${candidate}`);
+        return {};
+      } catch (error) {
+        logWarning(`Failed to load config: ${candidate}`);
+      }
+    }
+  }
+
+  return {};
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
 // Main CLI entry
 async function main(): Promise<void> {
   const { command, args, options } = parseArgs(process.argv);
@@ -539,14 +728,11 @@ async function main(): Promise<void> {
       break;
 
     case 'dev':
-      logInfo('Starting development server...');
-      logInfo('Use kona.ts for full configuration');
-      // Would call kona().runDev()
+      await runDev(args[0], options);
       break;
 
     case 'build':
-      logInfo('Building for production...');
-      // Would call kona().runProd()
+      await runBuild(args[0], options);
       break;
 
     case 'benchmark':

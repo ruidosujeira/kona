@@ -4,27 +4,11 @@
  * Provides optimized React support with:
  * - Fast Refresh (improved HMR)
  * - Automatic JSX runtime detection
- * - React Server Components support
- * - Concurrent features optimization
- *
- * @example
- * ```ts
- * fusebox({
- *   plugins: [
- *     pluginReact({
- *       fastRefresh: true,
- *       runtime: 'automatic', // or 'classic'
- *       development: true,
- *     })
- *   ]
- * })
- * ```
+ * - JSX/TSX transformation
  */
 
-import { Context } from '../../core/context';
-import { IModule } from '../../moduleResolver/module';
-import { createGlobalModuleCall } from '../../bundleRuntime/bundleRuntimeCore';
-import { parsePluginOptions } from '../pluginUtils';
+import { Plugin } from '../../core/plugins/pluginSystem';
+import * as ts from 'typescript';
 
 export interface IPluginReactOptions {
   /** Enable Fast Refresh for HMR */
@@ -34,49 +18,171 @@ export interface IPluginReactOptions {
   /** Development mode (enables extra checks) */
   development?: boolean;
   /** Import source for JSX (default: 'react') */
-  jsxImportSource?: string;
-  /** Enable React Server Components */
-  serverComponents?: boolean;
-  /** Profiler support */
-  profiler?: boolean;
-  /** File patterns to apply React transforms */
-  include?: RegExp;
-  /** File patterns to exclude */
-  exclude?: RegExp;
+  importSource?: string;
 }
 
-const DEFAULT_OPTIONS: IPluginReactOptions = {
-  fastRefresh: true,
-  runtime: 'automatic',
-  development: true,
-  jsxImportSource: 'react',
-  serverComponents: false,
-  profiler: false,
-  include: /\.(jsx|tsx)$/,
-};
-
 /**
- * Check if module is a React component
+ * React plugin for Kona bundler
  */
-function isReactComponent(contents: string): boolean {
-  // Check for common React patterns
-  const patterns = [
-    /import\s+.*\s+from\s+['"]react['"]/,
-    /import\s+\*\s+as\s+React\s+from\s+['"]react['"]/,
-    /require\s*\(\s*['"]react['"]\s*\)/,
-    /extends\s+(React\.)?Component/,
-    /extends\s+(React\.)?PureComponent/,
-    /<[A-Z][a-zA-Z0-9]*/, // JSX component
-    /React\.createElement/,
-    /jsx\s*\(/,
-    /jsxs\s*\(/,
-  ];
+export function pluginReact(options: IPluginReactOptions = {}): Plugin {
+  const opts = {
+    fastRefresh: options.fastRefresh ?? true,
+    runtime: options.runtime ?? 'automatic',
+    development: options.development ?? process.env.NODE_ENV !== 'production',
+    importSource: options.importSource ?? 'react',
+  };
 
-  return patterns.some(pattern => pattern.test(contents));
+  return {
+    name: 'react',
+    setup(build) {
+      // Transform JSX/TSX files
+      build.onTransform({ filter: /\.[jt]sx$/ }, async (args) => {
+        let code = args.contents;
+
+        // Transform TypeScript/JSX using TypeScript compiler
+        const result = ts.transpileModule(code, {
+          compilerOptions: {
+            target: ts.ScriptTarget.ES2020,
+            module: ts.ModuleKind.ESNext,
+            jsx: opts.runtime === 'automatic' 
+              ? ts.JsxEmit.ReactJSX 
+              : ts.JsxEmit.React,
+            jsxImportSource: opts.importSource,
+          },
+          fileName: args.path,
+        });
+
+        code = result.outputText;
+
+        // Add Fast Refresh wrapper in development
+        if (opts.fastRefresh && opts.development) {
+          code = wrapWithFastRefresh(code, args.path);
+        }
+
+        return { contents: code };
+      });
+
+      // Inject Fast Refresh runtime for development
+      if (opts.fastRefresh && opts.development) {
+        build.onBundle(async (args) => {
+          // Add Fast Refresh runtime to entry chunks
+          const chunks = args.chunks.map(chunk => {
+            if (chunk.isEntry) {
+              return {
+                ...chunk,
+                code: FAST_REFRESH_RUNTIME + '\n' + chunk.code,
+              };
+            }
+            return chunk;
+          });
+
+          return { chunks };
+        });
+      }
+    },
+  };
 }
 
 /**
- * Check if module uses hooks (for future optimization)
+ * Wrap component with Fast Refresh boundary
+ */
+function wrapWithFastRefresh(code: string, filename: string): string {
+  const moduleId = filename.replace(/[^a-zA-Z0-9]/g, '_');
+  
+  return `
+// Fast Refresh Preamble
+var prevRefreshReg = window.$RefreshReg$;
+var prevRefreshSig = window.$RefreshSig$;
+window.$RefreshReg$ = (type, id) => {
+  window.__REACT_REFRESH__.register(type, "${moduleId}_" + id);
+};
+window.$RefreshSig$ = window.__REACT_REFRESH__.createSignatureFunctionForTransform;
+
+try {
+${code}
+} finally {
+  window.$RefreshReg$ = prevRefreshReg;
+  window.$RefreshSig$ = prevRefreshSig;
+}
+
+// Fast Refresh Footer
+if (import.meta.hot) {
+  import.meta.hot.accept();
+  window.__REACT_REFRESH__.performReactRefresh();
+}
+`;
+}
+
+/**
+ * React Fast Refresh runtime
+ */
+const FAST_REFRESH_RUNTIME = `
+// React Fast Refresh Runtime
+(function() {
+  if (typeof window === 'undefined') return;
+  
+  var RefreshRuntime = {
+    _types: new Map(),
+    _pendingUpdates: [],
+    
+    register: function(type, id) {
+      if (typeof type !== 'function') return;
+      this._types.set(id, type);
+    },
+    
+    createSignatureFunctionForTransform: function() {
+      return function(type) { return type; };
+    },
+    
+    performReactRefresh: function() {
+      if (this._pendingUpdates.length === 0) {
+        this._pendingUpdates.push(Date.now());
+        
+        requestAnimationFrame(function() {
+          RefreshRuntime._pendingUpdates = [];
+          RefreshRuntime._scheduleUpdate();
+        });
+      }
+    },
+    
+    _scheduleUpdate: function() {
+      // Find React root and trigger update
+      var root = document.getElementById('root');
+      if (root && root._reactRootContainer) {
+        var internalRoot = root._reactRootContainer._internalRoot || root._reactRootContainer;
+        if (internalRoot && internalRoot.current) {
+          try {
+            internalRoot.current.memoizedState = null;
+          } catch (e) {}
+        }
+      }
+      
+      // React 18+ with createRoot
+      if (window.__REACT_DEVTOOLS_GLOBAL_HOOK__) {
+        var hook = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
+        if (hook.renderers) {
+          hook.renderers.forEach(function(renderer) {
+            if (renderer.scheduleRefresh) {
+              renderer.scheduleRefresh(null, function() { return true; });
+            }
+          });
+        }
+      }
+    },
+    
+    hasUnrecoverableErrors: function() {
+      return false;
+    }
+  };
+  
+  window.__REACT_REFRESH__ = RefreshRuntime;
+  window.$RefreshReg$ = function() {};
+  window.$RefreshSig$ = function() { return function(type) { return type; }; };
+})();
+`;
+
+/**
+ * Check if module uses hooks
  */
 export function usesHooks(contents: string): boolean {
   const hookPatterns = [
@@ -88,175 +194,9 @@ export function usesHooks(contents: string): boolean {
     /useCallback\s*\(/,
     /useMemo\s*\(/,
     /useRef\s*\(/,
-    /useLayoutEffect\s*\(/,
-    /useImperativeHandle\s*\(/,
   ];
 
   return hookPatterns.some(pattern => pattern.test(contents));
-}
-
-/**
- * Generate Fast Refresh wrapper for a module
- */
-function wrapWithFastRefresh(
-  module: IModule,
-  contents: string,
-  refreshRuntimeId: number
-): string {
-  const moduleId = module.id;
-
-  return `// React Fast Refresh wrapper
-(function() {
-  var prevRefreshReg = typeof window !== 'undefined' ? window.$RefreshReg$ : function() {};
-  var prevRefreshSig = typeof window !== 'undefined' ? window.$RefreshSig$ : function() { return function(type) { return type; }; };
-
-  if (typeof window !== 'undefined') {
-    var RefreshRuntime = ${createGlobalModuleCall(refreshRuntimeId)};
-
-    window.$RefreshReg$ = function(type, id) {
-      RefreshRuntime.register(type, '${moduleId}:' + id);
-    };
-
-    window.$RefreshSig$ = RefreshRuntime.createSignatureFunctionForTransform;
-  }
-
-  try {
-${contents}
-
-    // Register exports for Fast Refresh
-    if (typeof window !== 'undefined' && window.$RefreshReg$) {
-      if (typeof exports !== 'undefined') {
-        for (var key in exports) {
-          if (typeof exports[key] === 'function') {
-            window.$RefreshReg$(exports[key], key);
-          }
-        }
-        if (exports.default && typeof exports.default === 'function') {
-          window.$RefreshReg$(exports.default, 'default');
-        }
-      }
-    }
-  } finally {
-    if (typeof window !== 'undefined') {
-      window.$RefreshReg$ = prevRefreshReg;
-      window.$RefreshSig$ = prevRefreshSig;
-    }
-  }
-})();
-`;
-}
-
-/**
- * Generate Fast Refresh runtime injection
- */
-function generateRefreshRuntimeInjection(refreshRuntimeId: number): string {
-  return `// Fast Refresh Runtime Setup
-if (typeof window !== 'undefined' && typeof window.$RefreshReg$ === 'undefined') {
-  var RefreshRuntime = ${createGlobalModuleCall(refreshRuntimeId)};
-  RefreshRuntime.injectIntoGlobalHook(window);
-  window.$RefreshReg$ = function() {};
-  window.$RefreshSig$ = function() { return function(type) { return type; }; };
-}
-`;
-}
-
-/**
- * Find react-refresh runtime module
- */
-function findRefreshRuntime(modules: Record<string, IModule>): IModule | undefined {
-  for (const absPath in modules) {
-    if (absPath.includes('react-refresh/runtime') || absPath.includes('react-refresh')) {
-      return modules[absPath];
-    }
-  }
-  return undefined;
-}
-
-/**
- * React plugin
- */
-export function pluginReact(a?: IPluginReactOptions | RegExp | string, b?: IPluginReactOptions) {
-  const [opts] = parsePluginOptions<IPluginReactOptions>(a, b, DEFAULT_OPTIONS);
-  const options = { ...DEFAULT_OPTIONS, ...opts };
-
-  return (ctx: Context) => {
-    let refreshRuntimeModule: IModule | undefined;
-
-    // Resolve react-refresh on entry
-    if (options.fastRefresh && ctx.config.isDevelopment) {
-      ctx.ict.on('entry_resolve', async props => {
-        try {
-          const data = await props.module.resolve({ statement: 'react-refresh/runtime' });
-          if (data.module) {
-            refreshRuntimeModule = data.module;
-            ctx.log.info('react', 'Fast Refresh enabled');
-          }
-        } catch {
-          ctx.log.warn('react-refresh not found. Install with: npm install react-refresh');
-        }
-      });
-    }
-
-    // Inject Fast Refresh runtime before bundle
-    ctx.ict.on('before_bundle_write', props => {
-      if (!options.fastRefresh || !ctx.config.isDevelopment) return props;
-
-      const { bundle } = props;
-      const modules = ctx.bundleContext?.modules || {};
-
-      // Find refresh runtime if not already found
-      if (!refreshRuntimeModule) {
-        refreshRuntimeModule = findRefreshRuntime(modules);
-      }
-
-      if (refreshRuntimeModule) {
-        bundle.source.injectionBeforeBundleExec.push(
-          generateRefreshRuntimeInjection(refreshRuntimeModule.id)
-        );
-      }
-
-      return props;
-    });
-
-    // Transform React modules
-    ctx.ict.on('bundle_resolve_module', props => {
-      const { module } = props;
-      if (module.captured) return props;
-
-      // Check file extension
-      const isJSX = options.include?.test(module.absPath);
-      if (!isJSX && !module.absPath.endsWith('.jsx') && !module.absPath.endsWith('.tsx')) {
-        return props;
-      }
-
-      // Check exclusions
-      if (options.exclude?.test(module.absPath)) {
-        return props;
-      }
-
-      // Read module contents
-      module.read();
-      if (!module.contents) return props;
-
-      // Check if it's a React component
-      if (!isReactComponent(module.contents)) {
-        return props;
-      }
-
-      ctx.log.info('react', 'Processing $file', { file: module.publicPath });
-
-      // Apply Fast Refresh wrapper in development
-      if (options.fastRefresh && ctx.config.isDevelopment && refreshRuntimeModule) {
-        module.contents = wrapWithFastRefresh(
-          module,
-          module.contents,
-          refreshRuntimeModule.id
-        );
-      }
-
-      return props;
-    });
-  };
 }
 
 export default pluginReact;

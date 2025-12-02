@@ -6,6 +6,23 @@ export { kona } from './core/kona';
 // Backwards compatibility alias
 export { kona as fusebox } from './core/kona';
 
+// Core bundler components
+export { Bundler, bundle, createBundler } from './core/bundler/bundler';
+export type { BundlerOptions, BundleOutput, Chunk, Module } from './core/bundler/bundler';
+
+export { DevServer, createDevServer } from './core/devServer/server';
+export type { DevServerOptions, HMROptions } from './core/devServer/server';
+
+export { KonaParser, parse, scanImports, createParser } from './core/parser/parser';
+export type { ParseResult, ImportInfo, ExportInfo } from './core/parser/parser';
+
+export { ModuleResolver, createResolver, resolveModule } from './core/resolver/moduleResolver';
+export type { ResolveOptions, ResolveResult } from './core/resolver/moduleResolver';
+
+export { PluginManager } from './core/plugins/pluginSystem';
+export type { Plugin, PluginBuild, OnResolveArgs, OnLoadArgs, OnTransformArgs } from './core/plugins/pluginSystem';
+export { jsonPlugin, cssPlugin, rawPlugin, envPlugin, aliasPlugin, externalPlugin, virtualPlugin } from './core/plugins/pluginSystem';
+
 // Core plugins
 export { pluginAngular } from './plugins/core/plugin_angular';
 export { pluginConsolidate } from './plugins/core/plugin_consolidate';
